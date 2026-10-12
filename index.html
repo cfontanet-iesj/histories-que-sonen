@@ -1,0 +1,39 @@
+<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Històries que sonen — Temporitzador</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#18312f;background:#edf4f2}
+*{box-sizing:border-box}body{margin:0;padding:22px}.app{max-width:1050px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{font-size:clamp(1.5rem,4vw,2.5rem);margin:8px 0}h2{font-size:clamp(1.3rem,3vw,2rem);margin:0}.muted{color:#54716b}
+main{background:white;border-radius:22px;padding:clamp(20px,4vw,45px);margin-top:20px;box-shadow:0 12px 35px #193b3518}
+.timer{text-align:center;font-size:clamp(5rem,15vw,10rem);font-weight:750;letter-spacing:-.06em;font-variant-numeric:tabular-nums;line-height:1.25;margin:15px 0;color:#126c64}
+.instructions{white-space:pre-wrap;font-size:clamp(1.05rem,2vw,1.4rem);line-height:1.7;background:#f4f8f7;padding:22px;border-radius:16px;min-height:150px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}button{background:#176f65;border:0;color:white;padding:13px 18px;border-radius:10px;font:inherit;font-weight:650;cursor:pointer}button.secondary{background:#e2efeb;color:#194c45}button:disabled{opacity:.4;cursor:not-allowed}
+.progress{display:flex;gap:5px;margin-top:20px}.segment{height:12px;background:#dce8e5;border-radius:9px;flex:1}.segment.done{background:#18877b}.segment.active{background:#7dc6bb}
+small{font-size:.95rem}.status{font-weight:650;color:#27695f}.warning{font-size:.9rem;color:#6e5a39;margin-top:18px}
+@media print{button{display:none}body{background:white}}
+</style></head><body><div class="app"><header><div><div class="muted" id="course"></div><h1 id="title"></h1></div><button class="secondary" id="fullscreen">⛶ Pantalla completa</button></header>
+<main><div class="muted" id="phaseLabel"></div><h2 id="phaseName"></h2><div class="timer" id="clock" aria-live="off"></div><div class="status" id="status">Preparats per començar</div><div class="progress" id="progress"></div><div class="instructions" id="instructions"></div>
+<div class="actions"><button id="start">▶ Comença</button><button class="secondary" id="pause">⏸ Pausa</button><button class="secondary" id="previous">← Fase anterior</button><button class="secondary" id="next">Fase següent →</button><button class="secondary" id="reset">↺ Reinicia</button></div>
+<div class="warning">El temporitzador avança automàticament. Manteniu aquesta pestanya oberta. Les instruccions no es poden editar des d'aquesta pàgina.</div></main></div>
+<script>
+const config={"title": "Històries que sonen", "course": "Música · 2n d’ESO", "phases": [{"name": "Grups de treball", "minutes": 1, "instructions": "· Col·loqueu-vos amb el vostre grup de treball."}, {"name": "Imaginem", "minutes": 8, "instructions": "· Penseu què voleu explicar o transmetre amb la música.\n· Decidiu un títol i organitzeu la història en tres parts: inici, desenvolupament i final.\n· Escriviu a la fitxa què passa en cada moment i com ho representareu musicalment."}, {"name": "Composem la nostra polirítmia", "minutes": 17, "instructions": "· Creeu una polirítmia formada per dos patrons rítmics diferents: un per a la mà dreta i un altre per a la mà esquerra.\n· Escriviu els dos patrons diferents a la fitxa i practiqueu-los primer per separat.\n· Després, proveu d'interpretar-los simultàniament, mantenint una pulsació constant.\n· Organitzeu la vostra composició en tres parts (inici, desenvolupament i final) perquè expliqui la història que heu imaginat.\n· Recordeu: tots els membres del grup han d'aprendre a interpretar els dos patrons alhora. Si algú té alguna dificultat en la interpretació d'un patró, pot fer-ne una variació, però l'heu d'anotar a la fitxa a l'apartat de *Variacions."}, {"name": "Assagem i perfeccionem", "minutes": 25, "instructions": "· Practiqueu la polirítmia seguint aquest ordre:\n     1. Mà dreta sola.\n     2. Mà esquerra sola.\n     3. Les dues mans simultàniament.\n     4. Interpretació completa amb els canvis que representen la vostra història.\n· Ajudeu-vos entre vosaltres i comproveu que tots podeu interpretar la composició.\n· Reviseu la partitura perquè un altre grup la pugui entendre i interpretar a la propera sessió."}, {"name": "Ens autoavaluem individualment", "minutes": 3, "instructions": "· Autoavaluació individual: Cadascú omple la seva diana d'avaluació.\n↑ Participació i esforç\n← Independència de les mans\n↓ Pulsació i ritme\n→ Coordinació de les dues mans"}, {"name": "Ens autoavaluem grupalment", "minutes": 7, "instructions": "· Autoavaluació grupal: Tothom omple la seva diana d'avaluació, però les respostes han de ser consensuades en grup.\n↑ Participació i cooperació\n← Creació de la polirítmia\n↓ Narrativa musical (si hem pogut transmetre la història a través de la música)\n→ Claredat en la partitura"}]};
+const phases=config.phases;
+let index=0, remaining=phases[0].minutes*60, running=false, deadline=0, interval=null;
+const $=id=>document.getElementById(id);
+$('title').textContent=config.title;$('course').textContent=config.course;
+function format(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function render(){const p=phases[index];$('phaseLabel').textContent='FASE '+(index+1)+' DE '+phases.length;$('phaseName').textContent=p.name;$('clock').textContent=format(remaining);$('instructions').textContent=p.instructions;
+$('progress').replaceChildren(...phases.map((_,i)=>{let e=document.createElement('div');e.className='segment'+(i<index?' done':i===index?' active':'');return e}));
+$('status').textContent=running?'Temporitzador en marxa':remaining===0&&index===phases.length-1?'Sessió acabada':'Temporitzador en pausa / preparat';
+$('start').textContent=running?'▶ En marxa':'▶ '+(remaining===phases[index].minutes*60?'Comença':'Continua');$('start').disabled=running;$('pause').disabled=!running;
+$('previous').disabled=index===0;$('next').disabled=index===phases.length-1;
+document.title=format(remaining)+' · '+p.name;
+}
+function stop(){running=false;if(interval){clearInterval(interval);interval=null}}
+function setPhase(i){stop();index=Math.max(0,Math.min(i,phases.length-1));remaining=phases[index].minutes*60;render()}
+function tick(){if(!running)return;remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));if(remaining<=0){if(index<phases.length-1){index++;remaining=phases[index].minutes*60;deadline=Date.now()+remaining*1000}else{stop();remaining=0}}render()}
+function start(){if(running)return;if(remaining<=0){if(index===phases.length-1)return;setPhase(index+1)}running=true;deadline=Date.now()+remaining*1000;interval=setInterval(tick,250);render()}
+$('start').onclick=start;$('pause').onclick=()=>{if(!running)return;remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));stop();render()};
+$('previous').onclick=()=>setPhase(index-1);$('next').onclick=()=>setPhase(index+1);$('reset').onclick=()=>setPhase(0);
+$('fullscreen').onclick=()=>{if(document.fullscreenElement){document.exitFullscreen?.()}else{document.documentElement.requestFullscreen?.()}};
+render();
+</script></body></html>
